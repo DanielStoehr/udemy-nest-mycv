@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateReportDto } from './dtos/create-report.dto';
 import { Report } from './report.entity';
 import { User } from 'src/users/user.entity';
+import { GetEstimateDto } from './dtos/get-estimate.dto';
 
 @Injectable()
 export class ReportsService {
@@ -20,5 +21,22 @@ export class ReportsService {
     if (!report) throw new NotFoundException('report not found');
     report.approved = approved;
     return this.repo.save(report);
+  }
+
+  createEstimate(estimateDto: GetEstimateDto) {
+    const { make, model, lng, lat, year, mileage } = estimateDto;
+    return this.repo
+      .createQueryBuilder()
+      .select('AVG(price)', 'price')
+      .where('make = :make', { make })
+      .andWhere('model = :model', { model })
+      .andWhere('lng - :lng BETWEEN -5 AND 5', { lng })
+      .andWhere('lat - :lat BETWEEN -5 AND 5', { lat })
+      .andWhere('year - :year BETWEEN -3 AND 3', { year })
+      .andWhere('APPROVED IS TRUE')
+      .orderBy('mileage - :mileage', 'DESC')
+      .setParameters({ mileage })
+      .limit(3)
+      .getRawOne();
   }
 }
