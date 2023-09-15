@@ -4,11 +4,10 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ReportsModule } from './reports/reports.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './users/user.entity';
-import { Report } from './reports/report.entity';
 import { APP_PIPE } from '@nestjs/core';
 import * as session from 'express-session';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as ormconfig from '../ormconfig';
 
 @Module({
   imports: [
@@ -18,17 +17,18 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
     UsersModule,
     ReportsModule,
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        return {
-          type: 'sqlite',
-          database: config.get<string>('DB_NAME'),
-          entities: [User, Report],
-          synchronize: true,
-        };
-      },
-    }),
+    TypeOrmModule.forRoot(ormconfig),
+    // TypeOrmModule.forRootAsync({
+    //   inject: [ConfigService],
+    //   useFactory: (config: ConfigService) => {
+    //     return {
+    //       type: 'sqlite',
+    //       database: config.get<string>('DB_NAME'),
+    //       entities: [User, Report],
+    //       synchronize: true,
+    //     };
+    //   },
+    // }),
   ],
   controllers: [AppController],
   providers: [
@@ -37,11 +37,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
 })
 export class AppModule {
+  constructor(private configService: ConfigService) {}
+
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(
         session({
-          secret: 'my-secret',
+          secret: this.configService.get('COOKIE_KEY'),
           resave: false,
           saveUninitialized: false,
         }),
